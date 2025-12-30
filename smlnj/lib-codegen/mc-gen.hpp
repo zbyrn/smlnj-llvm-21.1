@@ -23,6 +23,7 @@ class MCGen {
   public:
 
     MCGen (TargetInfo const *target);
+    MCGen (TargetInfo const *target, std::optional<std::string_view> pipeline);
     ~MCGen ();
 
     /// per-module initialization

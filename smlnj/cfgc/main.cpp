@@ -44,7 +44,7 @@ enum class Output {
 // set the target architecture.  This call returns `true` when there
 // is an error and `false` otherwise.
 //
-bool setTarget (std::string_view target);
+bool setTarget (std::string_view target, std::string_view passes);
 
 // generate code
 void codegen (std::string const & src, bool emitLLVM, bool dumpBits, Output out);
@@ -69,6 +69,7 @@ int main (int argc, char **argv)
     bool emitLLVM = false;
     bool dumpBits = false;
     std::string src = "";
+    std::string passes = "";
     std::string_view targetArch = kHostArch;
 
     std::vector<std::string_view> args(argv+1, argv+argc);
@@ -99,6 +100,13 @@ int main (int argc, char **argv)
 		} else {
 		    usage();
 		}
+            } else if (args[i] == "-passes") {
+                i++;
+                if (i < args.size()) {
+                    passes = args[i];
+                } else {
+                    usage();
+                }
 	    } else {
 		usage();
 	    }
@@ -120,7 +128,7 @@ int main (int argc, char **argv)
     llvm::InitializeAllAsmParsers();
     llvm::InitializeAllAsmPrinters();
 
-    if (setTarget (targetArch)) {
+    if (setTarget (targetArch, passes)) {
 	std::cerr << "codegen: unable to set target to \"" << targetArch << "\"\n";
 	return 1;
     }
@@ -140,7 +148,7 @@ static smlnj::cfgcg::Context *gContext = nullptr;
 
 /// set the target machine
 //
-bool setTarget (std::string_view target)
+bool setTarget (std::string_view target, std::string_view passes)
 {
     if (gContext != nullptr) {
 	if (target.compare(gContext->targetInfo()->name) == 0) {
@@ -149,7 +157,11 @@ bool setTarget (std::string_view target)
 	delete gContext;
     }
 
-    gContext = smlnj::cfgcg::Context::create (target);
+    if (passes.empty()) {
+        gContext = smlnj::cfgcg::Context::create (target, std::nullopt);
+    } else {
+        gContext = smlnj::cfgcg::Context::create (target, std::make_optional(passes));
+    }
 
     return (gContext == nullptr);
 

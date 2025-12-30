@@ -33,35 +33,35 @@ namespace cfgcg {
 
 /***** class Context member functions *****/
 
-Context *Context::create (const TargetInfo *tgtInfo)
+Context *Context::create (const TargetInfo *tgtInfo, std::optional<std::string_view> passes)
 {
-    Context *buf = new Context (tgtInfo);
+    Context *buf = new Context (tgtInfo, passes);
 
     return buf;
 }
 
-Context *Context::create (std::string_view target)
+Context *Context::create (std::string_view target, std::optional<std::string_view> passes)
 {
     auto tgtInfo = TargetInfo::infoForTarget (target);
     if (tgtInfo == nullptr) {
 	return nullptr;
     }
 
-    Context *buf = new Context (tgtInfo);
+    Context *buf = new Context (tgtInfo, passes);
 
     return buf;
 }
 
-Context::Context (TargetInfo const *target)
+Context::Context (TargetInfo const *target, std::optional<std::string_view> passes)
   : LLVMContext(),
     _target(target),
     _builder(*this),
-    _gen(nullptr),
+    // _gen(nullptr, passes),
   // initialize the register info
     _regInfo(target),
     _regState(this->_regInfo)
 {
-    this->_gen = new MCGen (target),
+    this->_gen = new MCGen (target, passes);
 
   // initialize the standard types that we use
     this->i8Ty = llvm::IntegerType::get (*this, 8);

@@ -187,7 +187,7 @@ fi
 #
 if [ -d build ] ; then
   echo  "$0: removing existing build etc. directories"
-  rm -rf build bin lib include
+  rm -rf bin lib include
 fi
 
 echo "build-llvm.sh: mkdir build"

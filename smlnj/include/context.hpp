@@ -73,11 +73,11 @@ class Context : public llvm::LLVMContext {
 
     /// static function for creating the code buffer for the given target
     /// \param target specifies the target architecture
-    static Context *create (const TargetInfo * target);
+    static Context *create (const TargetInfo * target, std::optional<std::string_view> passes);
 
     /// static function for creating the code buffer for the given target
     /// \param target specifies the target architecture
-    static Context *create (std::string_view target);
+    static Context *create (std::string_view target, std::optional<std::string_view> passes);
 
     void optimize ();
 
@@ -896,7 +896,7 @@ class Context : public llvm::LLVMContext {
     void _addExtraArgs (Args_t &args, arg_info const &info) const;
 
     /// private constructor
-    Context (struct TargetInfo const *target);
+    Context (struct TargetInfo const *target, std::optional<std::string_view> passes);
 };
 
 } // namespace cfgcg

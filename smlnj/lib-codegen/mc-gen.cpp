@@ -36,7 +36,21 @@
 namespace smlnj {
 namespace cfgcg {
 
-MCGen::MCGen (TargetInfo const *info)
+static const char *DEFAULT_PIPELINE = "function("
+     "lower-expect,"
+     "simplifycfg,"
+     "instcombine<no-verify-fixpoint>,"
+     "reassociate,"
+     "early-cse,"
+     "gvn,"
+     "sccp,"
+     "dce,"
+     "simplifycfg,"
+     "instcombine<no-verify-fixpoint>,"
+     "simplifycfg<switch-to-lookup>"
+     ")";
+
+MCGen::MCGen (TargetInfo const *info, std::optional<std::string_view> pipeline)
   : _tgtInfo(info), _tgtMachine(nullptr), _mam(), _fam(), _pb(nullptr)
 {
   // get the LLVM target triple
@@ -101,24 +115,32 @@ MCGen::MCGen (TargetInfo const *info)
 
     // set up the optimization passes
     llvm::FunctionPassManager fpm;
-    fpm.addPass(llvm::LowerExpectIntrinsicPass());      // -lower-expect
-    fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
-    fpm.addPass(llvm::InstCombinePass());               // -instcombine
-    fpm.addPass(llvm::ReassociatePass());               // -reassociate
-    fpm.addPass(llvm::EarlyCSEPass(false));             // -early-cse
-    fpm.addPass(llvm::GVNPass());                       // -gvn
-    fpm.addPass(llvm::SCCPPass());                      // -sccp
-    fpm.addPass(llvm::DCEPass());                       // -dce
-    fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
-    fpm.addPass(llvm::InstCombinePass());               // -instcombine
-    // for the last simplification pass, we want to convert switches to jump tables
-    llvm::SimplifyCFGOptions opts;
-    opts.ConvertSwitchToLookupTable = true;
-    fpm.addPass(llvm::SimplifyCFGPass(opts));           // -simplifycfg
+    if (auto err = this->_pb->parsePassPipeline(fpm, pipeline.value_or(DEFAULT_PIPELINE))) {
+        llvm::errs() << "Pipeline Error: " << err << "\n";
+        assert(false);
+    }
+    // fpm.addPass(llvm::LowerExpectIntrinsicPass());      // -lower-expect
+    // fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
+    // fpm.addPass(llvm::InstCombinePass());               // -instcombine
+    // fpm.addPass(llvm::ReassociatePass());               // -reassociate
+    // fpm.addPass(llvm::EarlyCSEPass(false));             // -early-cse
+    // fpm.addPass(llvm::GVNPass());                       // -gvn
+    // fpm.addPass(llvm::SCCPPass());                      // -sccp
+    // fpm.addPass(llvm::DCEPass());                       // -dce
+    // fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
+    // fpm.addPass(llvm::InstCombinePass());               // -instcombine
+    // // for the last simplification pass, we want to convert switches to jump tables
+    // llvm::SimplifyCFGOptions opts;
+    // opts.ConvertSwitchToLookupTable = true;
+    // fpm.addPass(llvm::SimplifyCFGPass(opts));           // -simplifycfg
 
     this->_pm.addPass (llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
 
 } // MCGen constructor
+
+
+MCGen::MCGen(TargetInfo const *info) : MCGen(info, std::nullopt)
+{ }
 
 MCGen::~MCGen ()
 {
