@@ -20,4 +20,8 @@ target_include_directories(cfgc PRIVATE
   ${SMLNJ_LLVM_BINARY_DIR}/llvm/include ${SMLNJ_LLVM_SOURCE_DIR}/llvm/include)
 target_link_libraries(cfgc CFGCodeGen ${LLVM_LIBS})
 
+if (LLVM_USE_SANITIZER)
+  target_link_options(cfgc PRIVATE -fsanitize=address)
+endif()
+
 install(TARGETS cfgc)

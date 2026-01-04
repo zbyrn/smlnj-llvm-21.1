@@ -26,4 +26,8 @@ target_include_directories(heap2obj PRIVATE
   ${SMLNJ_LLVM_SOURCE_DIR}/llvm/include)
 target_link_libraries(heap2obj Heap2Obj ${LLVM_LIBS})
 
+if (LLVM_USE_SANITIZER)
+  target_link_options(heap2obj PRIVATE -fsanitize=address)
+endif()
+
 install(TARGETS heap2obj)

@@ -50,8 +50,18 @@ class MCGen {
     std::unique_ptr<llvm::TargetMachine> _tgtMachine;
 
   // analysis and optimization managers
-    llvm::ModuleAnalysisManager _mam;
+    // NOTE: the analysis managers must be declared in the following order
+    // to ensure they are destroyed in the correct order. Function Analysis
+    // Manager may refer to results stored in Loop Analysis Manager. For memory
+    // safety, _lam must outlive _fam. Because we only perform function-level
+    // optimizations, _mam should not refer to CGSCC-level analyses. Thus, a
+    // placeholder CGSCC Analysis Manager is locally constructed and discarded
+    // in MCGen's constructor. If this fact changes in the future, a _cgam field
+    // must be inserted between _fam and _mam below.
+    llvm::LoopAnalysisManager _lam;
     llvm::FunctionAnalysisManager _fam;
+    llvm::ModuleAnalysisManager _mam;
+
     llvm::ModulePassManager _pm;
     llvm::PassBuilder *_pb;
 

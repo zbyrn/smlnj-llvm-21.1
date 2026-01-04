@@ -214,27 +214,27 @@ void codegen (std::string const & src, bool emitLLVM, bool dumpBits, Output out)
     std::cout << " " << unpklTimer.msec() << "ms\n" << std::flush;
 
     // generate LLVM
-    std::cout << " generate llvm ..." << std::flush;;
+    std::cerr << " generate llvm ..." << std::flush;;
     Timer genTimer = Timer::start();
     cu->codegen (gContext);
     std::cout << " " << genTimer.msec() << "ms\n" << std::flush;
 
-    if (emitLLVM) {
-	gContext->dump ();
-    }
+    // if (emitLLVM) {
+	// gContext->dump ();
+    // }
 
     if (! gContext->verify ()) {
 	std::cerr << "Module verified\n";
     }
 
-    std::cout << " optimize ..." << std::flush;;
+    std::cerr << " optimize ...\n\n" << std::flush;;
     Timer optTimer = Timer::start();
     gContext->optimize ();
-    std::cout << " " << optTimer.msec() << "ms\n" << std::flush;
+    std::cerr << " end optimize" << optTimer.msec() << "ms\n" << std::flush;
 
-//    if (emitLLVM) {
-//	gContext->dump ();
-//    }
+    if (emitLLVM) {
+	gContext->dump ();
+    }
 
     if (! gContext->verify ()) {
 	std::cerr << "Module verified after optimization\n";
