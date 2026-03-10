@@ -10,7 +10,6 @@
 
 #include "smlnj/config.h"
 #include "target-info.hpp"
-#include "llvm/ADT/Twine.h"
 
 namespace smlnj {
 namespace cfgcg {
