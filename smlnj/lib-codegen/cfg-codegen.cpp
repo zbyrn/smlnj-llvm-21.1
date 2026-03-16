@@ -178,7 +178,7 @@ namespace CFG {
 	    fnTy = cxt->createFnTy (fk, genTypes (cxt, this->_v2));
 	    fn = cxt->build().CreateBitCast(
 		this->_v0->codegen (cxt),
-		fnTy->getPointerTo());
+		llvm::PointerType::getUnqual (*cxt));
 	} else {
 	    cluster *f = cxt->lookupCluster (lab->get_name());
 	    assert (f && "APPLY of unknown cluster");
@@ -229,7 +229,7 @@ namespace CFG {
 	    fnTy = cxt->createFnTy (frag_kind::STD_CONT, genTypes (cxt, this->_v2));
 	    fn = cxt->build().CreateBitCast(
 		this->_v0->codegen (cxt),
-		fnTy->getPointerTo());
+		llvm::PointerType::getUnqual (*cxt));
 	} else {
 	    cluster *f = cxt->lookupCluster (lab->get_name());
 	    assert (f && "THROW of unknown cluster");

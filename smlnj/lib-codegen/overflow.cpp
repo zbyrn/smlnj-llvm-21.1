@@ -54,7 +54,7 @@ llvm::BasicBlock *Context::getOverflowBB ()
       // traceback list.
 	auto call = this->_builder.CreateCall (
 	    this->_raiseOverflowFnTy,
-	    this->createBitCast(raiseFn, this->_raiseOverflowFnTy->getPointerTo()),
+	    this->createBitCast(raiseFn, llvm::PointerType::getUnqual(*this)),
 	    args);
 	call->setCallingConv (llvm::CallingConv::JWA);
 	call->setTailCallKind (llvm::CallInst::TCK_NoTail);
