@@ -48,7 +48,6 @@ usage() {
 
 CONFIG_ONLY=no
 LLVM_BUILD_TYPE=Release
-USE_GOLD_LD=no
 SANITIZE_ADDRESS=no
 NPROCS=2
 GENERATOR="make"
@@ -73,7 +72,6 @@ case `uname -s` in
     esac
   ;;
   Linux)
-    USE_GOLD_LD=yes
     if [ -x /bin/nproc ] ; then
       # NPROCS reports the number of hardware threads, which is usually twice the
       # number of actual cores, so we will divide by two.
@@ -166,10 +164,6 @@ CMAKE_DEFS="\
   -DLLVM_TARGETS_TO_BUILD=$TARGETS \
   -DLLVM_ENABLE_DUMP=ON \
 "
-
-if [ x"$USE_GOLD_LD" = xyes ] ; then
-  CMAKE_DEFS="$CMAKE_DEFS -DLLVM_USE_LINKER=gold"
-fi
 
 if [ x"$SANITIZE_ADDRESS" = xyes ] ; then
   CMAKE_DEFS="$CMAKE_DEFS -DLLVM_USE_SANITIZER=Address"
