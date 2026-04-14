@@ -6885,7 +6885,23 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   // Keep track of the result types.
   for (PHINode *PHI : PHIs) {
-    ResultTypes[PHI] = ResultLists[PHI][0].second->getType();
+    Constant *Val = ResultLists[PHI][0].second;
+    Type     *Ty  = Val->getType();
+
+    /*********************** SML/NJ Patch ***************************/
+    // Do not convert a switch if the switch initializes function pointers.
+    // Specifically, if there exists a phi node table whose type is a function
+    // or an entry of the table is an alias to a function, do not convert this
+    // switch to lookup table.                                             -BZ
+    if (Ty->isFunctionTy())
+      return false;
+
+    if (auto *Alias = dyn_cast<GlobalAlias>(Val))
+      if (isa<Function>(Alias->getAliasee()))
+        return false;
+    /***********************  End Patch  ***************************/
+
+    ResultTypes[PHI] = Ty;
   }
 
   uint64_t NumResults = ResultLists[PHIs[0]].size();
