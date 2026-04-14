@@ -111,9 +111,25 @@ MCGen::MCGen (TargetInfo const *info)
     fpm.addPass(llvm::DCEPass());                       // -dce
     fpm.addPass(llvm::SimplifyCFGPass());               // -simplifycfg
     fpm.addPass(llvm::InstCombinePass());               // -instcombine
-    // for the last simplification pass, we want to convert switches to jump tables
+
+    // ConvertSwitchToLookupTable is false by default, and this statement
+    // reaffirms this fact to serve as a tombstone to remind future wizards of
+    // the havoc that this once brought.  A switch may be used to initialize
+    // code pointers; for example, a case-expression where each branch first
+    // calls the same function installs a different continuation before jumping
+    // to a join point.  LLVM will convert this into a lookup table of code
+    // addresses for each continuation.  When a function pointer is in a global
+    // table, the global table is put into the .data.rel.ro section, for which
+    // the object loader writes the _absolute_ addresses for each symbol in the
+    // section, and then the section is treated as read-only.  On x86-64, the
+    // relocation type for each entry is R_X86_64_64; on ARM64, it is
+    // ARM64_RELOC_UNSIGNED.  Because the code object is moved several times in
+    // (and out of) memory after it has been loaded, the table will contain
+    // bogus addresses causing a fault.  Make sure we have a way to relocate
+    // such a table before the option is reenabled.                        -BZ
     llvm::SimplifyCFGOptions opts;
-    opts.ConvertSwitchToLookupTable = true;
+    opts.ConvertSwitchToLookupTable = false;
+
     fpm.addPass(llvm::SimplifyCFGPass(opts));           // -simplifycfg
 
     this->_pm.addPass (llvm::createModuleToFunctionPassAdaptor(std::move(fpm)));
