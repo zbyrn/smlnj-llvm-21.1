@@ -60,7 +60,7 @@ template <typename T>
 using lvar_map_t = std::unordered_map<LambdaVar::lvar, T *>;
 
 // map for global aliases
-using AliasMap_t = std::unordered_map<std::string, class llvm::Constant *>;
+using AliasMap_t = lvar_map_t<class llvm::Constant>;
 
 // the different kinds of fragments.  The first two are restricted
 // to entry fragments for clusters; all others are `INTERNAL`
@@ -348,7 +348,7 @@ class Context : public llvm::LLVMContext {
     llvm::Constant *blockDiff (llvm::BasicBlock *bb);
 
     /// evaluate a LABEL (which maps to the given function) to an absolute address
-    llvm::Value *evalLabel (llvm::Function *fn);
+    llvm::Value *evalLabel (LambdaVar::lvar lab);
 
     /// insert a binding into the label-to-fragment map
     void insertFrag (LambdaVar::lvar lab, CFG::frag *frag)
@@ -736,7 +736,7 @@ class Context : public llvm::LLVMContext {
     /// create an unamed global alias
     llvm::Constant *createGlobalAlias (
         llvm::Type *ty,
-        std::string const &name,
+        llvm::Twine const &name,
         llvm::Constant *v);
 
   /***** Code generation *****/
@@ -768,25 +768,25 @@ class Context : public llvm::LLVMContext {
     struct TargetInfo const     *_target;
     llvm::IRBuilder<>           _builder;
     class MCGen                 *_gen;
-    llvm::Module                *_module;       // current module
-    llvm::Function              *_curFn;        // current LLVM function
-    CFG::cluster                *_curCluster;   // current CFG cluster
-    lvar_map_t<CFG::cluster>    _clusterMap;    // per-module mapping from labels to clusters
-    lvar_map_t<CFG::frag>       _fragMap;       // pre-cluster map from labels to fragments
-    lvar_map_t<llvm::Value>     _vMap;          // per-fragment map from lvars to values
-    AliasMap_t                  _aliasMap;      //!< memo table for global aliases
+    llvm::Module                *_module;       //!< current module
+    llvm::Function              *_curFn;        //!< current LLVM function
+    CFG::cluster                *_curCluster;   //!< current CFG cluster
+    lvar_map_t<CFG::cluster>    _clusterMap;    //!< per-module mapping from labels to clusters
+    lvar_map_t<CFG::frag>       _fragMap;       //!< pre-cluster map from labels to fragments
+    lvar_map_t<llvm::Value>     _vMap;          //!< per-fragment map from lvars to values
+    lvar_map_t<llvm::Constant>  _aliasMap;      //!< memo table for global aliases
 
     // more cached types (these are internal to the Context class)
-    llvm::FunctionType *_gcFnTy;                // type of call-gc function
-    llvm::FunctionType *_raiseOverflowFnTy;     // type of raise_overflow function
+    llvm::FunctionType *_gcFnTy;                //!< type of call-gc function
+    llvm::FunctionType *_raiseOverflowFnTy;     //!< type of raise_overflow function
 
     // a basic block for the current cluster that will raise the Overflow exception
     llvm::BasicBlock *_overflowBB;
     std::vector<llvm::PHINode *> _overflowPhiNodes;
 
     // tracking the state of the SML registers
-    CMRegs _regInfo;                            // target-specific register info
-    CMRegState _regState;                       // current register values
+    CMRegs _regInfo;                            //!< target-specific register info
+    CMRegState _regState;                       //!< current register values
 
     /// target-machine properties
     int64_t _wordSzB;

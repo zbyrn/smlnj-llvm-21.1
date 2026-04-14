@@ -149,6 +149,9 @@ void Context::beginModule (std::string_view src, int nClusters)
 
     this->_gen->beginModule (this->_module);
 
+    // prepare alias map
+    this->_aliasMap.clear();
+
     // prepare the label-to-cluster map
     this->_clusterMap.clear();
     this->_clusterMap.reserve(nClusters);
@@ -458,28 +461,19 @@ void Context::setupFragEntry (CFG::frag *frag, std::vector<llvm::PHINode *> &phi
 
 llvm::Constant *Context::createGlobalAlias (
     llvm::Type *ty,
-    std::string const &name,
+    llvm::Twine const &name,
     llvm::Constant *v)
 {
-    // LLVM does not seem to memoize aliases if they are created with the same
-    // name, so we do that here
-    auto got = this->_aliasMap.find(name);
-    if (got == this->_aliasMap.end()) {
-        // no previous alias, so create one
-        auto alias = llvm::GlobalAlias::create (
-            ty,
-            0,
-            llvm::GlobalValue::PrivateLinkage,
-            name,
-            v,
-            this->_module);
-        alias->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
-        this->_aliasMap.insert (
-            std::pair<const std::string, llvm::Constant *>(name, alias));
-        return alias;
-    } else {
-        return got->second;
-    }
+    auto alias = llvm::GlobalAlias::create (
+        ty,
+        0,
+        llvm::GlobalValue::PrivateLinkage,
+        name,
+        v,
+        this->_module);
+    alias->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
+
+    return alias;
 
 }
 
@@ -488,7 +482,7 @@ llvm::Constant *Context::labelDiff (llvm::Function *f1, llvm::Function *f2)
   // define an alias for the value `(lab - curFn)`
     return this->createGlobalAlias (
 	this->intTy,
-	f1->getName().str() + "_sub_" + f2->getName().str(),
+	f1->getName() + "_sub_" + f2->getName(),
 	llvm::ConstantExpr::getIntToPtr(
 	    llvm::ConstantExpr::getSub (
 		llvm::ConstantExpr::getPtrToInt(f1, this->intTy),
@@ -501,7 +495,7 @@ llvm::Constant *Context::blockDiff (llvm::BasicBlock *bb)
 {
     return this->createGlobalAlias (
 	this->intTy,
-	bb->getName().str() + "_sub_" + this->_curFn->getName().str(),
+	bb->getName() + "_sub_" + this->_curFn->getName(),
 	llvm::ConstantExpr::getIntToPtr(
 	    llvm::ConstantExpr::getSub (
 		llvm::ConstantExpr::getPtrToInt(this->blockAddr(bb), this->intTy),
@@ -510,19 +504,36 @@ llvm::Constant *Context::blockDiff (llvm::BasicBlock *bb)
 
 }
 
-llvm::Value *Context::evalLabel (llvm::Function *fn)
+llvm::Value *Context::evalLabel (LambdaVar::lvar lab)
 {
+    CFG::cluster *cluster = this->lookupCluster (lab);
+
+    assert (cluster && "Unknown cluster label");
+
+    llvm::Function *fn = cluster->fn();
+
     if (this->_target->hasPCRel) {
-      // the target supports PC-relative addressing, but we still need to
-      // create an alias for `(lab - 0)` to force computation of the PC relative address.
-	return this->createGlobalAlias (
-	    this->intTy,
-	    fn->getName().str() + "_alias",
-	    llvm::ConstantExpr::getIntToPtr(
-		llvm::ConstantExpr::getSub (
-		    llvm::ConstantExpr::getPtrToInt(fn, this->intTy),
-		    llvm::Constant::getNullValue(this->intTy)),
-		this->mlValueTy));
+        // the target supports PC-relative addressing, but we still need to
+        // create an alias for `(lab - 0)` to force computation of the PC
+        // relative address.  We memoize the creation of these aliases, because
+        // LLVM does not merge them
+        auto got = this->_aliasMap.find (lab);
+        if (got == this->_aliasMap.end()) {
+            auto alias = this->createGlobalAlias (
+                    this->intTy,
+                    fn->getName() + "_alias",
+                    llvm::ConstantExpr::getIntToPtr(
+                        llvm::ConstantExpr::getSub (
+                            llvm::ConstantExpr::getPtrToInt(fn, this->intTy),
+                            llvm::Constant::getNullValue(this->intTy)),
+                        this->mlValueTy));
+            // memoize the alias
+            std::pair<LambdaVar::lvar,llvm::Constant *> pair(lab, alias);
+            this->_aliasMap.insert (pair);
+            return alias;
+        } else {
+            return got->second;
+        }
     }
     else {
 	llvm::Value *basePtr = this->_regState.getBasePtr();

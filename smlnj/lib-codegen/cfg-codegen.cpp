@@ -74,11 +74,7 @@ namespace CFG {
 
     llvm::Value *LABEL::codegen (smlnj::cfgcg::Context *cxt)
     {
-	cluster *cluster = cxt->lookupCluster (this->_v_name);
-
-	assert (cluster && "Unknown cluster label");
-
-	return cxt->evalLabel (cluster->fn());
+	return cxt->evalLabel (this->_v_name);
 
     } // LABEL::codegen
 
