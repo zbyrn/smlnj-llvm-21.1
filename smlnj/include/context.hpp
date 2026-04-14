@@ -59,6 +59,9 @@ struct TargetInfo;
 template <typename T>
 using lvar_map_t = std::unordered_map<LambdaVar::lvar, T *>;
 
+// map for global aliases
+using AliasMap_t = std::unordered_map<std::string, class llvm::Constant *>;
+
 // the different kinds of fragments.  The first two are restricted
 // to entry fragments for clusters; all others are `INTERNAL`
 //
@@ -733,7 +736,7 @@ class Context : public llvm::LLVMContext {
     /// create an unamed global alias
     llvm::Constant *createGlobalAlias (
         llvm::Type *ty,
-        llvm::Twine const &name,
+        std::string const &name,
         llvm::Constant *v);
 
   /***** Code generation *****/
@@ -771,6 +774,7 @@ class Context : public llvm::LLVMContext {
     lvar_map_t<CFG::cluster>    _clusterMap;    // per-module mapping from labels to clusters
     lvar_map_t<CFG::frag>       _fragMap;       // pre-cluster map from labels to fragments
     lvar_map_t<llvm::Value>     _vMap;          // per-fragment map from lvars to values
+    AliasMap_t                  _aliasMap;      //!< memo table for global aliases
 
     // more cached types (these are internal to the Context class)
     llvm::FunctionType *_gcFnTy;                // type of call-gc function

@@ -458,19 +458,29 @@ void Context::setupFragEntry (CFG::frag *frag, std::vector<llvm::PHINode *> &phi
 
 llvm::Constant *Context::createGlobalAlias (
     llvm::Type *ty,
-    llvm::Twine const &name,
+    std::string const &name,
     llvm::Constant *v)
 {
-    auto alias = llvm::GlobalAlias::create (
-	ty,
-	0,
-	llvm::GlobalValue::PrivateLinkage,
-	name,
-	v,
-	this->_module);
-    alias->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
+    // LLVM does not seem to memoize aliases if they are created with the same
+    // name, so we do that here
+    auto got = this->_aliasMap.find(name);
+    if (got == this->_aliasMap.end()) {
+        // no previous alias, so create one
+        auto alias = llvm::GlobalAlias::create (
+            ty,
+            0,
+            llvm::GlobalValue::PrivateLinkage,
+            name,
+            v,
+            this->_module);
+        alias->setUnnamedAddr (llvm::GlobalValue::UnnamedAddr::Global);
+        this->_aliasMap.insert (
+            std::pair<const std::string, llvm::Constant *>(name, alias));
+        return alias;
+    } else {
+        return got->second;
+    }
 
-    return alias;
 }
 
 llvm::Constant *Context::labelDiff (llvm::Function *f1, llvm::Function *f2)
@@ -478,7 +488,7 @@ llvm::Constant *Context::labelDiff (llvm::Function *f1, llvm::Function *f2)
   // define an alias for the value `(lab - curFn)`
     return this->createGlobalAlias (
 	this->intTy,
-	f1->getName() + "_sub_" + f2->getName(),
+	f1->getName().str() + "_sub_" + f2->getName().str(),
 	llvm::ConstantExpr::getIntToPtr(
 	    llvm::ConstantExpr::getSub (
 		llvm::ConstantExpr::getPtrToInt(f1, this->intTy),
@@ -491,7 +501,7 @@ llvm::Constant *Context::blockDiff (llvm::BasicBlock *bb)
 {
     return this->createGlobalAlias (
 	this->intTy,
-	bb->getName() + "_sub_" + this->_curFn->getName(),
+	bb->getName().str() + "_sub_" + this->_curFn->getName().str(),
 	llvm::ConstantExpr::getIntToPtr(
 	    llvm::ConstantExpr::getSub (
 		llvm::ConstantExpr::getPtrToInt(this->blockAddr(bb), this->intTy),
@@ -503,16 +513,11 @@ llvm::Constant *Context::blockDiff (llvm::BasicBlock *bb)
 llvm::Value *Context::evalLabel (llvm::Function *fn)
 {
     if (this->_target->hasPCRel) {
-#ifdef XXX
-      // the target supports PC-relative addressing, so we can directly
-      // refer to the function's label as a value.
-	return fn;
-#endif
       // the target supports PC-relative addressing, but we still need to
       // create an alias for `(lab - 0)` to force computation of the PC relative address.
 	return this->createGlobalAlias (
 	    this->intTy,
-	    fn->getName() + "_alias",
+	    fn->getName().str() + "_alias",
 	    llvm::ConstantExpr::getIntToPtr(
 		llvm::ConstantExpr::getSub (
 		    llvm::ConstantExpr::getPtrToInt(fn, this->intTy),
